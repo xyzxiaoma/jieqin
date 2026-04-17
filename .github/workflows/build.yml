@@ -16,6 +16,8 @@ jobs:
   build-macos:
     if: github.event.inputs.platform == 'macos'
     runs-on: macos-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +29,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          pip install --upgrade pip
           pip install pyinstaller PyQt6 tinycc
 
       - name: Build macOS app
@@ -62,6 +65,8 @@ jobs:
   build-windows:
     if: github.event.inputs.platform == 'windows'
     runs-on: windows-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
     
     steps:
       - uses: actions/checkout@v4
