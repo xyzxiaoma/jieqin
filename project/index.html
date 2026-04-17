@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>接亲小游戏 💍</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@400;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- C++ 语法高亮 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
+    <!-- MathJax 数学公式渲染 -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']]
+            },
+            startup: {
+                ready: function() {
+                    MathJax.startup.defaultReady();
+                }
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="qwebchannel.js"></script>
+</head>
+<body>
+
+<!-- ===== 爱心飘落动效 ===== -->
+<canvas id="hearts-canvas"></canvas>
+
+<!-- ===== 欢迎页 ===== -->
+<div id="screen-welcome" class="screen active">
+    <div class="page-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+    <div class="welcome-card">
+        <div class="welcome-rings">
+            <div class="ring ring-1"></div>
+            <div class="ring ring-2"></div>
+            <div class="ring ring-3"></div>
+            <span class="ring-icon">💍</span>
+        </div>
+        <h1 class="welcome-title">迎接幸福</h1>
+        <p class="welcome-subtitle">新郎官，准备好了吗？</p>
+        <div class="welcome-divider"></div>
+        <p class="welcome-desc">完成三个任务，获取三把钥匙<br>打开宝箱，抱得美人归</p>
+        <div class="welcome-keys">
+            <div class="wkey" id="wkey0"><span>🔑</span><label>钥匙 1</label></div>
+            <div class="wkey locked" id="wkey1"><span>🔒</span><label>钥匙 2</label></div>
+            <div class="wkey locked" id="wkey2"><span>🔒</span><label>钥匙 3</label></div>
+        </div>
+        <button class="btn-start" id="btn-start">开始挑战</button>
+    </div>
+</div>
+
+<!-- ===== 钥匙收集动画 ===== -->
+<div id="key-collect-overlay" class="key-collect-overlay" style="display:none;">
+    <div class="key-collect-inner">
+        <div class="key-collect-glow"></div>
+        <div class="key-collect-icon" id="key-collect-icon">🔑</div>
+        <div class="key-collect-text" id="key-collect-text">获得第1把钥匙！</div>
+        <div class="key-collect-sparkles" id="key-collect-sparkles"></div>
+        <button class="btn-key-confirm" id="key-collect-confirm">收下钥匙 ✨</button>
+    </div>
+</div>
+
+<!-- ===== 红宝解决弹窗 ===== -->
+<div id="redpacket-overlay" class="redpacket-overlay" style="display:none;">
+    <div class="redpacket-modal">
+        <div class="redpacket-header">
+            <span class="redpacket-icon">🧧</span>
+            <h3>红包解决</h3>
+        </div>
+        <p class="redpacket-tip">请给新娘发红包，然后由新娘输入跳过指令</p>
+        <p class="redpacket-hint">新娘在输入框中输入跳过密码即可通关</p>
+        <div class="redpacket-input-wrap">
+            <input type="text" id="redpacket-code" class="redpacket-input" placeholder="请输入跳过指令..." maxlength="5" autocomplete="off" />
+            <button class="btn-redpacket-submit" id="btn-redpacket-submit">确认</button>
+        </div>
+        <p class="redpacket-feedback" id="redpacket-feedback"></p>
+        <button class="btn-redpacket-close" id="btn-redpacket-close">关闭</button>
+    </div>
+</div>
+
+<!-- ===== 任务一：打字游戏 ===== -->
+<div id="screen-task1" class="screen">
+    <div class="page-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+    <button class="btn-redpacket" id="btn-redpacket-1">🧧</button>
+    <div class="task-header">
+        <div class="task-badge">任务一</div>
+        <h2 class="task-title">📝 打字挑战</h2>
+        <p class="task-desc">请在60秒内打完以下文字，速度需超过 <strong>60字/分钟</strong></p>
+    </div>
+
+    <div class="typing-panel">
+        <div class="typing-info">
+            <span id="t1-timer">⏱ 60</span>
+            <span id="t1-wpm">速度: 0 字/分</span>
+            <span id="t1-progress">0 / <span id="t1-total">0</span></span>
+        </div>
+        <div class="typing-source" id="typing-source"></div>
+        <textarea id="typing-input" class="typing-input" placeholder="请在此输入..." spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" maxlength="9999"></textarea>
+        <div class="typing-feedback" id="typing-feedback"></div>
+    </div>
+</div>
+
+<!-- ===== 任务二：C++ 算法题 ===== -->
+<div id="screen-task2" class="screen">
+    <div class="page-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+    <button class="btn-redpacket" id="btn-redpacket-2">🧧</button>
+    <div class="task-header">
+        <div class="task-badge">任务二</div>
+        <h2 class="task-title">💻 C++ 算法 - 爱心密码</h2>
+    </div>
+
+    <div class="leetcode-layout">
+        <!-- 左侧：题目描述 -->
+        <div class="leetcode-panel leetcode-problem">
+            <div class="problem-header">
+                <span class="problem-number">#2</span>
+                <span class="problem-title">破解爱心密码</span>
+            </div>
+            <div class="problem-desc">
+                <p>程序会自动传入三个整数数组：<code>years</code>、<code>months</code>、<code>days</code>。</p>
+                <p>请补全代码中标记的<strong>4个填空</strong>，筛选出符合条件的值并组合成8位密码。</p>
+                <ul style="margin-top:12px; padding-left:20px;">
+                    <li>填空1：isValidDate 函数参数</li>
+                    <li>填空2：比较运算符</li>
+                    <li>填空3：赋值表达式</li>
+                    <li>填空4：cout 输出表达式</li>
+                </ul>
+            </div>
+
+            <div class="problem-section">
+                <h4>📥 输入格式</h4>
+                <p>系统自动传入三个数组：</p>
+                <pre class="hint-code">vector&lt;int&gt; years  // 年份数组
+vector&lt;int&gt; months // 月份数组
+vector&lt;int&gt; days   // 日期数组</pre>
+            </div>
+
+            <div class="problem-section">
+                <h4>📤 输出要求</h4>
+                <p>输出一个8位整数，格式为 <code>YYYYMMDD</code>，例如：<code>20220125</code></p>
+            </div>
+
+            <div class="problem-section">
+                <h4>📋 示例</h4>
+                <div class="example-block">
+                    <div class="example-label">年份数组: [5201314, 2022, 1314, 12345, 520]</div>
+                    <div class="example-label">月份数组: [6, 13, 25, 99, 78]</div>
+                    <div class="example-label">日期数组: [2, 32, 100, 30, 520]</div>
+                    <div class="example-output">输出: <span class="highlight">20220602</span></div>
+                    <div class="example-analysis">
+                        <p>年份：四位数 → <span class="correct">2022</span></p>
+                        <p>月份：1-12 → <span class="correct">6</span></p>
+                        <p>日期：1-31 → <span class="correct">2</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="problem-section">
+                <h4>💡 提示</h4>
+                <pre class="hint-code">// 筛选条件
+年份: x >= 1000 && x <= 9999
+月份: x >= 1 && x <= 12
+日期: x >= 1 && x <= 31
+
+// 组合输出
+cout << year * 10000 + month * 100 + date;</pre>
+            </div>
+        </div>
+
+        <!-- 右侧：代码编辑器 -->
+        <div class="leetcode-panel leetcode-editor">
+            <div class="editor-header">
+                <span class="editor-lang">C++</span>
+                <span class="editor-hint">代码填空题</span>
+                <button class="btn-run" id="btn-run-cpp">▶ 运行</button>
+            </div>
+            <div class="cpp-editor-container">
+                <div class="cpp-line-numbers" id="cpp-line-numbers">1</div>
+                <div class="cpp-code-editor" id="cpp-code-editor" contenteditable="true" spellcheck="false"></div>
+            </div>
+            <div class="editor-output-header">📤 运行结果</div>
+            <div class="cpp-output" id="cpp-output">等待运行...</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 任务三：看图答题 ===== -->
+<div id="screen-task3" class="screen">
+    <div class="page-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+    <button class="btn-redpacket" id="btn-redpacket-3">🧧</button>
+    <div class="task-header">
+        <div class="task-badge">任务三</div>
+        <h2 class="task-title">📐 数学挑战</h2>
+        <p class="task-desc">这是一道关于极限的数学题</p>
+    </div>
+
+    <div class="task3-layout">
+        <div class="task3-image-area">
+            <div class="math-problem">
+                <div class="problem-label">📝 题目</div>
+                <div class="math-card">
+                    <div class="math-card-inner">
+                        <div class="math-outer-wrap">
+                            <!-- lim x→0 部分靠左 -->
+                            <div class="math-lim-line">
+                                <span class="math-lim">lim</span>
+                                <span class="math-subscript">x→0</span>
+                            </div>
+                            
+                            <!-- 主体：括号(分数)^(3/x) -->
+                            <div class="math-expr-row">
+                                <!-- 左括号 -->
+                                <span class="math-bracket">(</span>
+                                
+                                <!-- 分数部分 -->
+                                <div class="math-frac-block">
+                                    <!-- 分子：2^x + 53^x + 49069^x -->
+                                    <div class="math-frac-num">
+                                        <div class="math-term">2<sup>x</sup></div>
+                                        <span class="math-op">+</span>
+                                        <div class="math-term">53<sup>x</sup></div>
+                                        <span class="math-op">+</span>
+                                        <div class="math-term">49069<sup>x</sup></div>
+                                    </div>
+                                    <!-- 分隔线 -->
+                                    <div class="math-frac-bar"></div>
+                                    <!-- 分母：3 -->
+                                    <div class="math-frac-den">3</div>
+                                </div>
+                                
+                                <!-- 右括号 -->
+                                <span class="math-bracket">)</span>
+                                
+                                <!-- 右上角指数 3/x -->
+                                <div class="math-expo">
+                                    <div class="math-expo-num">3</div>
+                                    <div class="math-expo-line"></div>
+                                    <div class="math-expo-den">x</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="math-card-glow"></div>
+                </div>
+                <div class="problem-hint">💡 提示：利用重要极限 lim<sub>x→0</sub>(1+x)<sup>1/x</sup> = e</div>
+            </div>
+        </div>
+        <div class="task3-answer-area">
+            <div class="answer-label">请输入你的答案：</div>
+            <div class="answer-input-wrap">
+                <input type="text" id="task3-answer" class="answer-input" placeholder="输入答案..." />
+                <button class="btn-submit-answer" id="btn-submit-task3">提交答案</button>
+            </div>
+            <div class="answer-feedback" id="task3-feedback"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 宝箱页 ===== -->
+<div id="screen-box" class="screen">
+    <div class="page-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+    <div class="task-header">
+        <div class="task-badge">最终关卡</div>
+        <h2 class="task-title">🔮 宝箱</h2>
+        <p class="task-desc">收集三把钥匙，开启宝箱</p>
+    </div>
+
+    <div class="box-area">
+        <div class="keys-display">
+            <div class="key-slot" id="key-slot-0">
+                <div class="key-slot-ring">🔑</div>
+                <span>钥匙 1</span>
+                <div class="key-slot-line"></div>
+            </div>
+            <div class="key-slot" id="key-slot-1">
+                <div class="key-slot-ring">🔑</div>
+                <span>钥匙 2</span>
+                <div class="key-slot-line"></div>
+            </div>
+            <div class="key-slot" id="key-slot-2">
+                <div class="key-slot-ring">🔑</div>
+                <span>钥匙 3</span>
+                <div class="key-slot-line"></div>
+            </div>
+        </div>
+
+        <div class="treasure-box-wrap" id="treasure-box-wrap">
+            <div class="treasure-box" id="treasure-box">
+                <div class="box-body">
+                    <div class="box-lid">
+                        <div class="box-lid-inner"></div>
+                    </div>
+                    <div class="box-body-inner">
+                        <div class="box-glow"></div>
+                    </div>
+                </div>
+            </div>
+            <button class="btn-open-box" id="btn-open-box" disabled>🔒 三把钥匙未集齐</button>
+        </div>
+
+        <div class="box-status" id="box-status">等待钥匙收集...</div>
+    </div>
+</div>
+
+<!-- ===== 爱心展示页 ===== -->
+<div id="screen-heart" class="screen">
+    <div class="page-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+    <div class="heart-scene">
+        <div class="heart-center" id="heart-center">
+            <!-- 对话框将动态生成围绕成心形 -->
+        </div>
+        <div class="heart-continue" id="heart-continue" style="display:none;">
+            <button class="btn-heart-next" id="btn-heart-next">继续 ▼</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 最终问题 ===== -->
+<div id="screen-final" class="screen">
+    <div class="page-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+    <div class="final-scene">
+        <div class="final-stars" id="final-stars"></div>
+        <div class="final-question-card">
+            <div class="final-icon">💫</div>
+            <h2 class="final-q">还记得我们第一次相遇的日子吗？</h2>
+            <div class="final-input-wrap">
+                <input type="text" id="final-answer" class="final-input" placeholder="请输入日期，如 2025.1.1" />
+                <button class="btn-final-submit" id="btn-final-submit">提交</button>
+            </div>
+            <div class="final-feedback" id="final-feedback"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== 成功页面 ===== -->
+<div id="screen-success" class="screen">
+    <div class="page-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+    </div>
+    <div class="success-scene">
+        <div class="success-burst"></div>
+        <div class="success-hearts" id="success-hearts"></div>
+        <h1 class="success-title">💍 恭喜你，新郎官！</h1>
+        <p class="success-sub">你成功通过了所有考验<br>新娘正在等你...</p>
+        <div class="success-shoe-lock">
+            <div class="shoe-lock-icon">👠</div>
+            <div class="shoe-lock-text">婚鞋密码</div>
+            <div class="shoe-lock-code">220613</div>
+        </div>
+        <div class="success-confetti" id="success-confetti"></div>
+    </div>
+</div>
+
+<!-- ===== 全局通知 ===== -->
+<div id="toast" class="toast" style="display:none;"></div>
+
+<script src="game.js"></script>
+
+<!-- QWebChannel 初始化（由 PyQt 注入） -->
+<script id="pychannel-init">
+(function() {
+    if (window.__pyChannelInited) return;
+    window.__pyChannelInited = true;
+    if (typeof QWebChannel === 'undefined') {
+        console.warn('QWebChannel not loaded yet');
+        return;
+    }
+    if (!window.webChannelTransport) {
+        console.warn('webChannelTransport not available');
+        return;
+    }
+    new QWebChannel(window.webChannelTransport, function(channel) {
+        window.pyBridge = channel.objects.pyBridge;
+        window.pyBridge.cppResult.connect(function(result, success) {
+            if (window.onCppResult) window.onCppResult(result, success);
+        });
+        window.pyBridge.typingResult.connect(function(passed) {
+            if (window.onTypingResult) window.onTypingResult(passed);
+        });
+        window.pyBridge.keyCollected.connect(function(index) {
+            if (window.updateKeysState_ui) window.updateKeysState_ui(index);
+        });
+        window.__bridgeReady = true;
+        if (window.__onBridgeReady) window.__onBridgeReady();
+    });
+})();
+</script>
+</body>
+</html>
