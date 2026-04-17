@@ -1,0 +1,93 @@
+name: Build Releases
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Target Platform'
+        required: true
+        default: 'macos'
+        type: choice
+        options:
+          - macos
+          - windows
+
+jobs:
+  build-macos:
+    if: github.event.inputs.platform == 'macos'
+    runs-on: macos-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller PyQt6 tinycc
+
+      - name: Build macOS app
+        run: |
+          python -m PyInstaller --name=jieqin_game --windowed \
+            --add-data "index.html:." \
+            --add-data "game.js:." \
+            --add-data "style.css:." \
+            --add-data "qwebchannel.js:." \
+            --hidden-import=PyQt6 \
+            --hidden-import=PyQt6.QtWidgets \
+            --hidden-import=PyQt6.QtWebEngineWidgets \
+            --hidden-import=PyQt6.QtWebChannel \
+            --hidden-import=tinycc \
+            --collect-all=PyQt6 \
+            --collect-all=tinycc \
+            py/main.py
+
+      - name: Package as ZIP
+        run: |
+          cd dist
+          zip -r jieqin_game_macos.zip jieqin_game.app
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: macos-v1.0
+          release_name: macOS Build
+          files: dist/jieqin_game_macos.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-windows:
+    if: github.event.inputs.platform == 'windows'
+    runs-on: windows-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller PyQt6 tinycc
+
+      - name: Build Windows exe
+        run: |
+          python -m PyInstaller --name=jieqin_game --windowed --collect-all PyQt6 --collect-all tinycc py/main.py
+
+      - name: Package as ZIP
+        run: |
+          Compress-Archive -Path "dist\jieqin_game" -DestinationPath "dist\jieqin_game_windows.zip"
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: windows-v1.0
+          release_name: Windows Build
+          files: dist/jieqin_game_windows.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
